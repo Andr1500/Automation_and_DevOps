@@ -1,0 +1,125 @@
+video: https://www.youtube.com/watch?v=ae72pKpXe-s&ab_channel=TeKanAid - tutorial
+
+https://www.youtube.com/watch?v=3yU0BRbANs0&ab_channel=Pablo%27sSpot  - integration vault with terraform
+
+https://www.youtube.com/watch?v=Oyvnicmxmbo&ab_channel=Tobi%27sDeveloperCorner - vault on docker
+
+Vault benefits: cloud agnostic, API driven, hybrid cloud environments, dynamic short-lived creds
+
+Vault solve: secrets sprawl
+
+vault use cases: centrally store, encrypting app data, identity based access
+
+vault commands: version, read, write, delete, list, login, agent 
+
+vault server modes: dev and prod
+
+dev mode: not secure, stores everything in memory, automatically unsealed
+
+vault server -dev -dev-root-token-id=root  #run vault in dev mode with the token root
+
+export VAULT_ADDR='http://127.0.0.1:8200' #export env var vault addr
+
+vault login #login into vault and provide token (root in out case)
+
+vault kv put -mount=secret foo bar=baz #add some secret into vault 
+
+vault kv get secret/foo #get secrets from vault 
+
+vault kv delete secret/foo #delete secrets from vault
+
+vault kv undelete -versions=2 secret/foo  #restore deleted secret 
+
+vault kv destroy -versions=2 secret/foo #permanently destroy credentials from vault 
+
+
+Vault seal and unseal concept
+
+vault operator seal #sealing, removes the master key in memory
+
+autounseal - reduses complexity, delegated responsibility from users to trusted device or service, at startup vault will connect to the device implementing the seal
+
+
+the config file  running vault in "prod" mode:
+
+spec config in config file;
+
+start the server;
+
+init the server to get unseal keys and init root token.
+
+
+The config file and prod Vault mode
+
+vault server -config=./vault-config.hcl #add necessary config into vault config file and run vault server
+
+export VAULT_ADDR=http://localhost:8200 #export env var in the other session
+
+vault operator init -key-shares=1 -key-threshold=1 #create 1 unseal key and 1 root token 
+
+Unseal Key 1: UNSEAL_KEY
+
+Initial Root Token: ROOT_TOKEN
+
+export VAULT_TOKEN=ROOT_TOKEN  #export token as env var
+
+vault operator unseal  #unseal vault 
+
+
+Enable audit logging
+
+ vault audit enable file file_path=/home/a1500/vault_hashicorp/logs/vault_audit.log  #enable log path
+ 
+ tail -f ./logs/vault_audit.log  #check logs 
+ 
+ 
+Authentication overview, types
+
+Policies: default and root 
+
+
+vault secrets list #list vault engines
+
+Vault agent: client daemon, app can be vault unavare
+
+vault agent -config=/etc/vault/agent-config.hcl  #config vault agent  
+
+
+Add policy path templating for creation users and groups: https://learn.hashicorp.com/tutorials/vault/policy-templating#step-1-write-templated-acl-policies
+
+user-tmpl policy:
+# Grant permissions on user specific path
+path "user-kv/*" {
+    capabilities = [ "create", "update", "read", "delete", "list" ]
+}
+
+# For Web UI usage
+path "user-kv/metadata" {
+    capabilities = [ "create", "update", "read", "delete", "list" ]
+}
+
+group-tmpl policy:
+# Grant permissions on the group specific path
+# The region is specified in the group metadata
+path "group-kv/data/education/*" {
+    capabilities = [ "create", "update", "read", "delete", "list" ]
+}
+
+# Group member can update the group information
+path "identity/group/id/{{identity.groups.names.education.id}}" {
+  capabilities = [ "update", "read" ]
+}
+
+# For Web UI usage
+path "group-kv/metadata" {
+  capabilities = [ "create", "update", "read", "delete", "list" ]
+}
+
+
+Run vault server in background mode:
+run crontab -e and add:
+
+@reboot vault server -config=/home/user/vault_hashicorp/vault-config.hcl &>dev.null &
+
+add VAULT_ADDR into /etc/environment
+VAULT_ADDR="http://localhost:8200"

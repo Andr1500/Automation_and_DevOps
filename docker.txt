@@ -1,0 +1,212 @@
+Docker layers:
+linux based image
+app image 
+
+
+image and container
+
+image - artifact, container - running env
+
+docker vs VM:
+VM works on app and kernel layers, docker only on app layer 
+docker image much smaller, docker container much faster, VM can run on any host, 
+
+run some container (postgres in our case):
+docker run -i --name postgres3 -p 5432:5432 -e POSTGRES_HOST_AUTH_METHOD=trust -d postgres:11.17-alpine
+--name  #the name of the container (we name it)
+-d # start container in detached mode (like running in the backgorund) 
+-p #ports
+or docker run --name some-postgres-container -e POSTGRES_PASSWORD=mysecretpassword -d postgres:11.17-alpine
+
+Commands:
+docker pull
+docker run
+docker start
+docker stop
+docker ps
+docker exec -it 
+-it is for interactive terminal
+docker logs
+
+stop some container 
+docker stop e1cd5a37e0f4  (id of the container)
+
+start container 
+docker start e1cd5a37e0f4
+
+list of all containers 
+docker ps -a 
+
+#binding host port to the container port
+docker run --name postgres_latest -p5400:5432 -e POSTGRES_PASSWORD=password  -d  postgres
+
+#check container logs 
+docker logs c65371ce7f7e
+docker logs postgres_latest
+
+# run bash on some docker container
+docker exec -it postgres_alpine /bin/bash
+
+#remove all stopped docker containers 
+docker rm $(docker ps --filter status=exited -q)
+
+#remove all docker images 
+docker rmi -f $(docker images -aq)
+
+Demo project
+Developer create js app -> push code on git -> run CI (f.e. Jenkins) ->
+-> push created docker image on docker repo -> up the app on dev server
+
+Demo project
+mongodb, mongo express, 
+
+#create some docker network
+docker network mongo-network
+
+#create mogodb container
+docker run -d --network mongo-network--name mongodb \
+	-e MONGO_INITDB_ROOT_USERNAME=admin \
+	-e MONGO_INITDB_ROOT_PASSWORD=secret \
+	mongo
+
+# create mongo-express container
+docker run -d  -p 8081:8081  \
+-e ME_CONFIG_MONGODB_ADMINUSERNAME=admin  \
+-e ME_CONFIG_MONGODB_ADMINPASSWORD=secret  \
+--net mongo-network  \
+--name mongo-expless  \
+-e ME_CONFIG_MONGODB_SERVER=mongodb mongo-express
+
+docker compose
+#run the compose file and up the containers
+ docker-compose -f docker-compose.yaml up
+ 
+ #down the containers 
+ docker-compose -f docker-compose.yaml down
+ 
+ Dockerfile 
+  FROM - source image 
+  ENV - env. vars 
+  RUN - run some commands on container (execute)
+  COPY - executes on thehost
+  CMD - command, execute commands, entrypoint command 
+
+#build the image. dot means current dir of dockerfile 
+docker build -t nodejs-app:0.0.1 .
+
+###########Dockerfile###############
+FROM node:14-alpine3.15
+
+ENV MONGO_DB_USERNAME=admin \
+    MONGO_DB_PWD=password
+
+RUN mkdir -p /home/app
+
+COPY ./app /home/app
+
+# set default dir so that next commands executes in /home/app dir
+WORKDIR /home/app
+
+# will execute npm install in /home/app because of WORKDIR
+RUN npm install
+
+# no need for /home/app/server.js because of WORKDIR
+CMD ["node", "server.js"]
+###################################
+
+#login into container if bash doesn't work, we can use shell 
+docker exec -it 1b2720aca6ce /bin/sh
+
+docker container registry as ECR on aws
+create ECR repo, 1 repo per 1 image
+
+problem with login, error "Got permission denied while trying to connect to the 
+Docker daemon socket at unix:///var/run/docker.sock: Post "http://%2Fvar%2Frun%2Fdocker.sock/v1.24/auth": 
+dial unix /var/run/docker.sock: connect: permission denied"
+
+#was necessary to change file permission 
+sudo chmod 666 /var/run/docker.sock
+
+#next succesfully loged into ECR
+aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin https://account.dkr.ecr.eu-central-1.amazonaws.com
+
+#change the image tag 
+docker tag nodejs-app:0.0.1 account.dkr.ecr.eu-central-1.amazonaws.com/nodejs-app:0.0.1
+
+# push the image to ecr 
+docker push account.dkr.ecr.eu-central-1.amazonaws.com/nodejs-app:0.0.1
+
+Deploy containerized app
+
+#create or edit docker compose file 
+ sudo docker-compose -f docker-compose.yaml up
+
+###############docker.compose.yaml#########
+version: '3'
+services:
+  my-app:
+    image: account.dkr.ecr.eu-central-1.amazonaws.com/my-app:0.0.3
+    ports:
+      - 3000:3000
+  mongodb:
+    image: mongo
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+
+  mongo-express:
+    image: mongo-express
+    restart: always # fixes MongoNetworkError when mongodb is not ready when mongo-express starts
+    ports:
+      - 8080:8081
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=password
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+
+####################################
+
+
+Persisting data volumes:
+
+Folder of physical host file system is mounted into the virt. fs of docker 
+3 volume types: 
+docker run -v /home/mount:/var/lib/mysql/data
+docker run -v /var/lib/mysql/data (anonymous volumes)
+docker run -v namr:/var/lib/mysql/data (named volumes)
+
+################docker-compose.yaml#########
+version: '3'
+services:
+  my-app:
+    image: account.dkr.ecr.eu-central-1.amazonaws.com/my-app:0.0.3
+    ports:
+      - 3000:3000
+  mongodb:
+    image: mongo
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    volumes:
+      - mongo-data:/data/db  #degault path of the container where data is stored
+  mongo-express:
+    image: mongo-express
+    restart: always # fixes MongoNetworkError when mongodb is not ready when mongo-express starts
+    ports:
+      - 8080:8081
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=password
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+volumes:  #list of all volunes which are necessary to use
+  mongo-data:
+    driver: local
+##########################################3##
+
+Location of docker volumes
+#physical location of the data 
+sudo  ls /var/lib/docker/volumes/techworld-js-docker-demo-app_mongo-data/_data

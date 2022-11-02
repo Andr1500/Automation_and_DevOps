@@ -1,0 +1,97 @@
+pipeline config file
+
+ci/cd is written in yaml format and has .gitlab-ci.yml 
+
+gitlab job is executed on gitlab runners
+
+it can be shell or docker executors
+
+by default gitlab use Ruby image to start docker container,
+in this case is necessary to specify image
+
+pipeline:
+run tests -> build image -> deploy -> 
+
+structure of CI script:
+job:
+  script: 
+    - execute script (for succesfull ececution necessary tools should be available, f.e. python)
+	
+We need to have container registry credentials available in gitlab for pulling and pushing
+containers, it's under
+settings -> CI/CD -> Variables
+
+how to build docker image and push it into ECR registry
+https://medium.com/devops-with-valentine/gitlab-ci-build-push-docker-image-to-aws-ecr-elastic-container-registry-b63b91a58728
+
+VERY IMPORTANT: it is necessaty that the branch in gitlab, from which we run the pipeline, is in protected mode (by default it is in unprotected mode)
+
+########################.gitlab-ci.yml##############
+
+#variables
+variables:
+  DOCKER_REGISTRY: 138161713046.dkr.ecr.eu-central-1.amazonaws.com
+  AWS_DEFAULT_REGION: eu-central-1
+  IMAGE_NAME: python-app
+  APP_NAME: python-app
+  IMAGE_TAG: python-app-1.0
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
+#run test
+run_tests:
+  image: python:3.9-slim-buster #we need this image because default docker image is Ruby based on
+  before_script: #set up necessary dependencies
+    - apt-get update && apt-get install make
+  script:
+    - make test
+
+#build docker image and push it to private repo
+build_image:
+  image: 
+    name: amazon/aws-cli
+    entrypoint: [""]
+  services:
+    - docker:dind
+  before_script:
+    - amazon-linux-extras install docker
+    - aws --version
+    - docker --version
+  script:
+    # - mkdir ~/.aws/
+    # - touch ~/.aws/credentials
+    # - printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\nregion = %s\n" "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" "$AWS_DEFAULT_REGION" >> ~/.aws/credentials
+    - aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 138161713046.dkr.ecr.eu-central-1.amazonaws.com
+    - docker build -t $DOCKER_REGISTRY/$IMAGE_NAME:$CI_PIPELINE_IID .
+    - docker push $DOCKER_REGISTRY/$IMAGE_NAME:$CI_PIPELINE_IID
+	
+#########################
+
+Define stages for running one job by one 
+
+Deployment
+we need server (f.e. ubntu serber), with ssh pub key on the managed platform, docker should be installed on the server
+
+Deploy the app
+
+add ssh private key to variables as a file 
+
+Bash script for deletion old pipelines
+#################delete.sh#############
+#!/bin/bash
+set -e
+
+TOKEN="gitlab_token"
+# Visible under name of project page.
+PROJECT_ID="number"
+# Set your gitlab instance url.
+GITLAB_INSTANCE="https://gitlab.com/api/v4/projects"
+# How many to delete from the oldest, 100 is the maximum, above will just remove 100.
+PER_PAGE=100
+UPDATED_BEFORE=2022-11-01T00:00:00Z
+
+for PIPELINE in $(curl --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_INSTANCE/$PROJECT_ID/pipelines?per_page=$PER_PAGE&sort=asc&updated_before=$UPDATED_BEFORE" | jq '.[].id') ; do
+    echo "Deleting pipeline $PIPELINE"
+    curl --header "PRIVATE-TOKEN: $TOKEN" --request "DELETE" "$GITLAB_INSTANCE/$PROJECT_ID/pipelines/$PIPELINE"
+done
+#######################################
