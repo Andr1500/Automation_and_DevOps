@@ -1,0 +1,47 @@
+run sonarqube as a Docker container:
+
+docker run --name sonarqube -p 9000:9000 sonarqube:latest
+
+open sonarqube in web browser on localhost and login with anmin login and password
+
+Next, install sonar scanner, it is possible with this script https://gist.github.com/Chetan07j/85e80d2a17c4d2d75172bf378efe93b9
+
+###############################
+#!/bin/bash
+
+cd /tmp || exit
+echo "Downloading sonar-scanner....."
+if [ -d "/tmp/sonar-scanner-cli-4.7.0.2747-linux.zip" ];then
+    sudo rm /tmp/sonar-scanner-cli-4.7.0.2747-linux.zip
+fi
+wget -q https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+echo "Download completed."
+
+echo "Unziping downloaded file..."
+unzip sonar-scanner-cli-4.7.0.2747-linux.zip
+echo "Unzip completed."
+rm sonar-scanner-cli-4.7.0.2747-linux.zip
+
+echo "Installing to opt..."
+if [ -d "/var/opt/sonar-scanner-4.7.0.2747-linux" ];then
+    sudo rm -rf /var/opt/sonar-scanner-4.7.0.2747-linux
+fi
+sudo mv sonar-scanner-4.7.0.2747-linux /var/opt
+
+echo "Installation completed successfully."
+
+echo "You can use sonar-scanner!"
+##################################
+
+run project locally 
+
+next, create new project, next copy execution script  and execute it
+in root project directory, f.e.
+
+/var/opt/sonar-scanner-4.7.0.2747-linux/bin/sonar-scanner \
+  -Dsonar.projectKey=test2 \
+  -Dsonar.sources=. \
+  -Dsonar.host.url=http://127.0.0.1:9000 \
+  -Dsonar.login=sqp_16e109d9ac6d95c262556240fd270918f7b699fb
+
+sonarqube will run scan and result will be exist in sonar GUI
