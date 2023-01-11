@@ -89,7 +89,23 @@ docker compose
   ENV - env. vars 
   RUN - run some commands on container (execute)
   COPY - executes on thehost
-  CMD - command, execute commands, entrypoint command 
+  CMD - command, execute commands, default entrypoint command 
+  ENTRYPOINT - if container must do something on every start
+  
+# simple docker file with CMD and Entrypoint
+
+###############Dockerfile##############
+FROM ubuntu
+MAINTAINER Natan
+RUN apt-get update
+ENTRYPOINT ["echo", "Hello"]
+CMD ["World"]
+######################################
+
+next, we build the container , and run the command
+sudo docker run [container_name] [your_name], execution 
+which we will have "Hello your_name", because it overwrite cmd 
+but not entrypoint
 
 #build the image. dot means current dir of dockerfile 
 docker build -t nodejs-app:0.0.1 .
