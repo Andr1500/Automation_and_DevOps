@@ -130,6 +130,14 @@ RUN npm install
 CMD ["node", "server.js"]
 ###################################
 
+#run container as non root user
+docker container run --rm -it \             # --rm causes Docker to automatically remove the container when it exits
+  -v $(app):/app \                          # Mount the source code
+  --workdir /app \                          # Set the working dir
+  --user 1000:1000 \                        # Run as the given user, if we need to run as current user, use --user $(id -u):$(id -g)
+  my-docker/my-build-environment:latest \   # Our build env image
+  make assets                               # ... and the command
+
 #login into container if bash doesn't work, we can use shell 
 docker exec -it 1b2720aca6ce /bin/sh
 
