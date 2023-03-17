@@ -1,0 +1,16 @@
+usefull links:
+OS: Rocky linux 8
+
+installation of wordpress:
+https://techviewleo.com/install-wordpress-with-apache-on-rocky-almalinux/
+
+management ports and protocols:
+https://linuxconfig.org/redhat-8-open-and-close-ports
+
+hardening of the server:
+https://www.atlantic.net/vps-hosting/how-to-secure-rocky-linux-8/
+
+important!
+after installation it is necessary to check php wersion, for now minimum should be 7.3
+here is the process of installation other php version:
+https://www.tecmint.com/install-php-7-on-rocky-linux/
