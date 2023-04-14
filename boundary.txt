@@ -1,0 +1,21 @@
+Hashicorp Boundary
+
+user -> user logs in with trusted identity -> auth is based on roles and logical services -> user selects app or host from catalog -> connects to app automatically
+
+install boundary:
+
+https://developer.hashicorp.com/boundary/tutorials/hcp-getting-started/hcp-getting-started-install
+
+install docker (depends on system), install jq 
+
+1. start in dev mode
+
+boundary dev -api-listen-address=0.0.0.0 -cluster-listen-address=0.0.0.0 -proxy-listen-address=0.0.0.0 -worker-public-address=3.120.189.149
+
+2. login and password
+
+echo "password" > pass.txt
+
+export BOUNDARY_ADDR=http://ip_addr:9200
+boundary authenticate password -auth-method-id=ampw_1234567890 -login-name=admin  -password=file://pass.txt -token-name=none -format=json | jq -r ".token" > boundary_token.txt
+export BOUNDARY_TOKEN=$(cat boundary_token.txt)

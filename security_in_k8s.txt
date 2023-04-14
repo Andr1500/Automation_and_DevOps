@@ -1,0 +1,79 @@
+1 best practice: do docker image scanning. tools: snyk, sysdig
+
+scanning can be done during build in cicd pipeline, after building image 
+
+scanning image regularly in repository in case of finding new vulnerabilities in basic image 
+
+
+2 best prectice: run container as non root 
+
+create a dedicated user and group, change to non-rot user wuth USER directive in Dockerfile 
+
+k8s misconfiguration can run the container as a root user, to avoid it should be like this:
+runAsUser: 1000 allowPrivilegeEscalation: false 
+
+
+ 3 best practice: users and permissions in k8s 
+ 
+keep permissions as restrictible as possible with RBAC 
+
+role defines what can you do with which resources, role always set permissions with a particular namespace 
+
+roles should be attached to users 
+
+k8s doesnt manage users natively, no k8s objects exist for representing user accounts, admins can chose from different auth strategies 
+
+define resources and permissons cluster wide , with ClusterRole attribute 
+
+ServiceAccount - resource that represents an app user (for prometheus f.e.) 
+
+
+4 bp: use network policies 
+
+define communication rules between pods, control traffic flow at the ip address or port level, which pod can alk to which 
+
+NetworkPolicy kind for control , can be implemented by the network plugin (kalico f.e.) , necessary also controler which implements it 
+
+ServiceMesh control communication between pods on app level 
+
+apply least access allowed rules 
+
+
+5 bp: encrypt communication
+
+use mTLS between services 
+
+
+6 bp: secure secret data 
+
+by default, secrets stored unencrypted, only base64 encoded 
+
+use EncryptionConfiguration resource, but you need to manage the encryption key 
+
+3rd party tools: aws kms, vault
+
+7 bp: secure etcd store 
+
+put etcd behind a firewall, encrypt etcd data
+
+
+8 bp: backup and restore 
+
+automated backup and restore
+
+reularly backs up, stores safely, be able easily restore cluster
+
+
+9 bp: conf security policies 
+
+following policy as code 
+
+can be implement with 3rd party engines: open policy agent, kyverno 
+
+admission controller is resonsible for it 
+
+
+10 bp: disaster recovery within a short time 
+
+can be some tool for disaster recovery, like K10 
+

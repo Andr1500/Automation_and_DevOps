@@ -1,0 +1,174 @@
+prometeus monitoring
+
+constantly monitor all the services
+
+alert when crash
+
+identify problems before
+
+arcitecture:
+
+prometeus server: does the actual monitoring work, contains: 
+
+storage - time series DB, stores metrics data
+
+retrieval - data retriveal worker, pulls metric data 
+
+http server - accepts queries, accepts PromQL queies
+
+Metrics: human readable text based format, type and help attributes metric entries
+
+type: counter - how many times x happened, gauge - what is the current value of x now, histogram - how long or how big
+
+exporter - exporting existing metrics from third-party systems as Prometheus metrics.
+
+how exporter works: fetches metrics from some service -> converts to correct format -> expose metrics 
+
+for monitoring a linux server: 
+
+download a node exporter,
+
+untar and execute,
+
+converts metrics of the server,
+
+exposes/ metrics endpoint,
+
+configure prometeus to scrape this endpoint 
+
+Monitoring your own apps:  using client libraries you can expose /metric endpoint
+
+Pull system of monitoring 
+
+configuring prometeus:
+
+global block: how often prometeus will scrape its targets
+
+rules block: for aggregating metric values or creating alerts when condition met 
+
+scrape configs block: what prometeus momitors
+
+prometeus characteristics: reliable, standalone, works when other parts of infrastructure broken.
+
+alertmanager: enf alerts (by email f.e.)
+
+Setup monitoring in k8s cluster 
+
+how to deploy to k8s cluster:
+
+1. creating all config yaml files youself and execute it in right order 
+
+2. using a k8s operator 
+
+3. using helm chart to depoy the operator 
+
+repository for installation and configuration prometeus with helm 
+
+we have as deployed: 2 statefulsets (prometeus server and alertmanager), 3 deployments (prometeus operator, grafana, kube state metrics), 
+
+1 demonset (node exporter demonset, translate worker node metrics to prometeus metrics ), pods from deployments and statefulsets, services - each component has its own 
+
+
+General configuration: monitoring stack and config for k8s cluster: worker nodes monitored and k8s components monitored
+
+configmaps: configs for diff parts, managed by operator, 
+
+secrets: for grafana, for prometeus, for operator, we have certificates, username passwords
+
+CRDs: customer resource definitions
+
+need to understand: how to add allert rules, how to adjust prometeus config
+
+for running: k port-forward deployment/prometheus-grafana 3000 
+
+Prometheus UI 
+
+for running: k port-forward prometheus-prometheus-kube-prometheus-prometheus-0 9090
+
+
+Demo app with prometeus monitoring :
+
+1. deploy mongo db app 
+
+2. deploy mongo db Exporter 
+
+3. deploy ServiceMonitor 
+
+start minikube
+
+minikube start --cpus 2 --memory 4096 --vm-driver docker
+
+install helm chart 
+
+helm install prometheus prometheus-community/kube-prometheus-stack
+
+make port forwarding for prometheus service (k is alias for kubectl)
+
+k port-forward service/prometheus-kube-prometheus-prometheus 9090
+
+clone repo https://gitlab.com/nanuchi/youtube-tutorial-series.git
+
+apply mongodb.yaml file:  k apply -f mongodb.yaml
+
+for using mongodb ap it is necessary to use exporter (something like translator between apps data to prometeus understandable metrics)
+
+exporter is separate deployment , no need to change config files 
+
+3 components for deploying exporter: exporter app (exposes /metrics endpoint), service (for connecting to the exporter ), ServiceMonitor
+
+helm chart repo:
+
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+check helm values and save it in some doc:
+
+helm show values prometheus-community/prometheus-mongodb-exporter > mongodb_exporter_values.yaml
+
+edit the necessary parameters it the values file : labels and uri
+
+apply new helm chart with the edited file :
+
+ helm install mongodb-exporter prometheus-community/prometheus-mongodb-exporter -f mongodb_exporter_values.yaml
+ 
+ check if everything is ok:
+ 
+ helm ls
+ mongodb-exporter	default  	1       	2023-02-15 16:49:08.188018545 +0100 CET	deployed	prometheus-mongodb-exporter-3.1.2	0.31.0  
+ 
+  k get pods
+  mongodb-exporter-prometheus-mongodb-exporter-6ffdb6775b-zbk4c   1/1     Running   0          35s
+  
+ k get svc
+mongodb-exporter-prometheus-mongodb-exporter   ClusterIP   10.103.168.114   <none>        9216/TCP                     45s
+
+ k get servicemonitor
+mongodb-exporter-prometheus-mongodb-exporter         54s
+
+ k get servicemonitor mongodb-exporter-prometheus-mongodb-exporter -o yaml
+ # check that release promeheus exists
+ apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  annotations:
+    meta.helm.sh/release-name: mongodb-exporter
+    meta.helm.sh/release-namespace: default
+  creationTimestamp: "2023-02-15T16:00:03Z"
+  generation: 1
+  labels:
+    app.kubernetes.io/instance: mongodb-exporter
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: prometheus-mongodb-exporter
+    app.kubernetes.io/version: 0.31.0
+    helm.sh/chart: prometheus-mongodb-exporter-3.1.2
+    release: prometheus
+
+making port  forward from mongodb-exporter-prometheus-mongodb-exporter service 
+
+ k port-forward service/mongodb-exporter-prometheus-mongodb-exporter 9216
+ 
+ and now when we go to http://127.0.0.1:9090/targets?search= we will dee mongodb-exporter target 
+ 
+ run grafana 
+ 
+ k port-forward deployment/prometheus-grafana 3000

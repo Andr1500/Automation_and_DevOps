@@ -1,0 +1,107 @@
+service mesh
+
+service mesh manages communication between microservices 
+
+resolution: service mesh with Sidecar pattern 
+
+sidecar proxy: 
+
+handles networking logic, acts as a proxy, third party app, cluster operators can conf it easily
+
+control plane injects the sidecar proxy 
+
+core feature:  traffic splitting (canary deployment) 
+
+architecture: envoy proxy as a data plane, Istiod as a control plane for configuration, discovery, certificates
+
+key building blocks of Istio's traffic routing: VirtualService (route traffic to a given destination) 
+and DestinationRule (configure what happens to traffic for that destination) 
+
+Istio features: service discovery, security, metrics and tracing 
+
+dynamic service discovery: internal registry for services and their endpoints 
+
+certificate management: secure TLS communication between microservices 
+
+metrics: gather telemetry data 
+
+Istio ingress gateway - entrypoint to the cluster, alternative to nginx ingres controller 
+
+
+setup Istio in k8s cluster
+
+minikube start --cpus 2 --memory 4096 --vm-driver docker
+
+download istio from the link:
+
+https://istio.io/latest/docs/setup/getting-started/
+
+next: config istio comand line tool istioctl 
+
+export PATH=$PATH:/home/user/minikube/istio/istio-1.17.0/bin
+
+install Istio in k8 cluster 
+
+ istioctl install
+ 
+k get pods -n istio-system # we have 2 istio pods running in istio ns
+NAME                                    READY   STATUS    RESTARTS   AGE
+istio-ingressgateway-6d98749ff5-7svd6   1/1     Running   0          11m
+istiod-7448594799-zrn8c                 1/1     Running   0          11m
+
+clone simple project 
+git clone https://github.com/GoogleCloudPlatform/microservices-demo.git
+
+go to microservices-demo/release and run 
+k apply -f kubernetes-manifests.yaml
+
+show labels in default ns 
+ k get ns default --show-labels
+NAME      STATUS   AGE   LABELS
+default   Active   78d   kubernetes.io/metadata.name=default
+
+add istio label 
+ k label ns default istio-injection=enabled
+namespace/default labeled
+
+check labels 
+ k get ns default --show-labels
+NAME      STATUS   AGE   LABELS
+default   Active   78d   istio-injection=enabled,kubernetes.io/metadata.name=default
+
+reapply the same pods by deleting and applying again
+ k delete -f kubernetes-manifests.yaml
+  k apply -f kubernetes-manifests.yaml
+  
+ when we will check status of some pod, we will se:
+ k describe pod adservice-548fbd9656-cznbt
+ Controlled By:    ReplicaSet/adservice-548fbd9656
+Init Containers:
+  istio-init:
+    Image:      docker.io/istio/proxyv2:1.17.0
+
+ 
+ For visualization we have Istio intgrations. we can find it in istio-x.x.x/samples/addons and apply it as k8s configs (apply all 4 addons)
+ 
+ k apply -f samples/addons
+ 
+ k get svc -n istio-system
+ 
+ Jaeger - addon for distributed tracing 
+ 
+ zipkin - alternative to jaeger 
+ 
+ in /extras we have also prometheus-operator.yaml file 
+ 
+ kiali - Configure, visualize, validate and troubleshoot mesh 
+ 
+ "app" is specified in config specially for visualization :
+ spec:
+  selector:
+    matchLabels:
+      app: emailservice
+  template:
+    metadata:
+      labels:
+        app: emailservice
+		
