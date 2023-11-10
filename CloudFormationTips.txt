@@ -1,0 +1,24 @@
+how we can trigger custom resource every time when we run CF updates:
+
+https://www.linkedin.com/pulse/invoke-customresources-after-cfn-update-david-krohn
+
+ Parameters: 
+  LambdaExecutionTimestamp:
+    Type: String
+    Default: ''
+    
+ Resources:
+   ExecuteLambda:
+    Type: 'Custom::ExecuteLambda'
+    Properties:
+      ServiceToken: !GetAtt
+        - Lambda
+        - Arn
+      Timestamp: !Ref LambdaExecutionTimestamp
+
+aws cloudformation update-stack \                                                                           
+    --stack-name mystack \
+    --template-body file://root.yaml \
+    --parameters ParameterKey=LambdaExecutionTimestamp,ParameterValue="$(date +%Y%m%d%H%M%S)" \
+    --capabilities CAPABILITY_NAMED_IAM \
+    --region eu-central-1
